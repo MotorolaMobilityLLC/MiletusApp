@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <string name="app_name">MiletusApp</string>
+    <string name="show_more">Show more</string>
+    <string name="hide">Hide</string>
+    <string name="ok">OK</string>
+    <string name="menu_refresh">Refresh</string>
+    <string name="menu_search">Search</string>
+    <string name="menu_commands">Refresh Commands</string>
+    <string name="menu_oss_licensing">Open Source Licenses</string>
+    <string name="error_android_version">Please upgrade to Android 6.0.1 or later versions.</string>
+    <string name="error_querying_state">Could not query device state. See log for more details</string>
+    <string name="error_setting_state">Could not set state. See log for more details</string>
+    <string name="error_getting_traits">Could not get traits. See log for more details</string>
+    <string name="error_bluetooth_off">Turn on the Bluetooth</string>
+    <string name="error_wifi_off">Turn on the Wifi</string>
+    <string name="image_description_device_icon">Device icon</string>
+    <string name="send_by_ble">Send by BLE</string>
+    <string name="send_by_wifi">Send by Wifi</string>
+    <string name="ble">BLE</string>
+    <string name="cloud">Cloud</string>
+    <string name="wifi">Wifi</string>
+    <string name="lan">Lan</string>
+    <string name="set_value">SET VALUE</string>
+
+    <!-- Strings related to About -->
+    <string name="about">About</string>
+    <string name="install_date">First install date</string>
+    <string name="update_date">Last update date</string>
+    <string name="dex_date">Compilation date</string>
+    <string name="mf_date">Build date</string>
+    <string name="error_retrieving_info">Error retrieving information</string>
+</resources>

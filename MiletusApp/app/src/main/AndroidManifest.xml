@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+ The MIT License (MIT)
+ Copyright (c) 2016 Gustavo Frederico Temple Pedrosa - gustavof@motorola.com
+ <p>
+ Permission is hereby granted, free of charge, to any person obtaining
+ a copy of this software and associated documentation files (the
+ "Software"), to deal in the Software without restriction, including
+ without limitation the rights to use, copy, modify, merge, publish,
+ distribute, sublicense, and/or sell copies of the Software, and to
+ permit persons to whom the Software is furnished to do so, subject to
+ the following conditions:
+ <p>
+ The above copyright notice and this permission notice shall be
+ included in all copies or substantial portions of the Software.
+ <p>
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.moto.miletus.application">
+
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme.NoActionBar">
+        <activity
+            android:name="com.moto.miletus.application.MainActivity"
+            android:label="@string/app_name"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.moto.miletus.application.DeviceActivity"
+            android:label="@string/app_name"
+            android:parentActivityName="com.moto.miletus.application.MainActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Motoi">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.moto.miletus.application.MainActivity" />
+        </activity>
+        <activity
+            android:name="com.moto.miletus.application.utils.AboutActivity"
+            android:label="@string/app_name"
+            android:parentActivityName="com.moto.miletus.application.MainActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Motoi">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.moto.miletus.application.MainActivity" />
+        </activity>
+        <activity
+            android:name="com.moto.miletus.application.tabs.CommandsActivity"
+            android:label="@string/app_name"
+            android:parentActivityName="com.moto.miletus.application.DeviceActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Motoi">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.moto.miletus.application.DeviceActivity" />
+        </activity>
+
+        <receiver
+            android:name="com.moto.miletus.application.ble.neardevice.NearDeviceNotification"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter android:priority="100">
+                <action android:name="NearDevice" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
