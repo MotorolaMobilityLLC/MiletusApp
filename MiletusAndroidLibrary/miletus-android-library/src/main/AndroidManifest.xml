@@ -1,0 +1,32 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.moto.miletus">
+
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <application>
+
+        <service
+            android:name="com.moto.miletus.ble.BleScanService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name="com.moto.miletus.ble.BleScanService$BluetoothReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.bluetooth.adapter.action.STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <provider
+            android:authorities="${applicationId}.InitProvider"
+            android:name=".utils.InitProvider"
+            android:exported="false" />
+
+    </application>
+
+</manifest>

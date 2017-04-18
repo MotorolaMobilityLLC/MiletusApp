@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <!-- Application theme Motoi. -->
+    <style name="Theme.Motoi" parent="@style/Theme.AppCompat.Light.DarkActionBar">
+
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+
+        <item name="actionBarItemBackground">@drawable/selectable_background_motoi</item>
+        <item name="dropDownListViewStyle">@style/DropDownListView.Motoi</item>
+        <item name="actionBarTabStyle">@style/ActionBarTabStyle.Motoi</item>
+        <item name="actionDropDownStyle">@style/DropDownNav.Motoi</item>
+        <item name="actionBarStyle">@style/ActionBar.Solid.Motoi</item>
+        <item name="actionModeCloseButtonStyle">@style/ActionButton.CloseMode.Motoi</item>
+
+                <!-- Light.DarkActionBar specific -->
+        <item name="actionBarWidgetTheme">@style/Theme.Motoi.Widget</item>
+
+    </style>
+
+    <style name="ActionBar.Solid.Motoi" parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">
+        <item name="background">@drawable/ab_solid_motoi</item>
+        <item name="backgroundStacked">@drawable/ab_stacked_solid_motoi</item>
+        <item name="backgroundSplit">@drawable/ab_bottom_solid_motoi</item>
+        <item name="progressBarStyle">@style/ProgressBar.Motoi</item>
+    </style>
+
+    <style name="ActionBar.Transparent.Motoi" parent="@style/Widget.AppCompat.ActionBar">
+        <item name="progressBarStyle">@style/ProgressBar.Motoi</item>
+    </style>
+
+    <style name="DropDownListView.Motoi" parent="@style/Widget.AppCompat.ListView.DropDown">
+        <item name="android:listSelector">@drawable/selectable_background_motoi</item>
+    </style>
+
+    <style name="ActionBarTabStyle.Motoi" parent="@style/Widget.AppCompat.ActionBar.TabView">
+        <item name="android:background">@drawable/tab_indicator_ab_motoi</item>
+    </style>
+
+    <style name="DropDownNav.Motoi" parent="@style/Widget.AppCompat.Spinner.DropDown.ActionBar">
+        <item name="android:background">@drawable/spinner_background_ab_motoi</item>
+        <item name="android:dropDownSelector">@drawable/selectable_background_motoi</item>
+    </style>
+
+    <style name="ProgressBar.Motoi" parent="@style/Widget.AppCompat.ProgressBar.Horizontal">
+        <item name="android:progressDrawable">@drawable/progress_horizontal_motoi</item>
+    </style>
+
+    <style name="ActionButton.CloseMode.Motoi" parent="@style/Widget.AppCompat.ActionButton.CloseMode">
+        <item name="android:background">@drawable/btn_cab_done_motoi</item>
+    </style>
+
+    <!-- this style is only referenced in a Light.DarkActionBar based theme -->
+    <style name="Theme.Motoi.Widget" parent="@style/Theme.AppCompat">
+        <item name="dropDownListViewStyle">@style/DropDownListView.Motoi</item>
+    </style>
+
+</resources>
