@@ -1,4 +1,4 @@
-/*************************************************************************
+/*
  * The MIT License (MIT)
  * Copyright (c) 2016 Gustavo Frederico Temple Pedrosa -- gustavof@motorola.com
  * <p>
@@ -20,7 +20,7 @@
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *************************************************************************/
+ */
 
 package com.moto.miletus.application.viewholder;
 
@@ -40,7 +40,7 @@ public class ViewHolderButton extends RecyclerView.ViewHolder
 
     private static final String TAG = ViewHolderButton.class.getSimpleName();
 
-    public final Button button;
+    private final Button button;
     private final CommandWrapper command;
     private final OnRunCommandListener runCommandListener;
 
@@ -61,6 +61,15 @@ public class ViewHolderButton extends RecyclerView.ViewHolder
         this.command = command;
         this.runCommandListener = runCommandListener;
         this.button.setOnClickListener(this);
+    }
+
+    /**
+     * getButton
+     *
+     * @return Button
+     */
+    public Button getButton() {
+        return button;
     }
 
     @Override

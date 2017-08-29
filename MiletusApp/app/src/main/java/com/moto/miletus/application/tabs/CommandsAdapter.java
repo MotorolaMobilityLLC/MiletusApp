@@ -166,11 +166,11 @@ class CommandsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (holder instanceof ViewHolderButton) {
             final ViewHolderButton viewHolderButton = (ViewHolderButton) holder;
 
-            viewHolderButton.button.setText(componentCommand.getCommandName());
+            viewHolderButton.getButton().setText(componentCommand.getCommandName());
         } else if (holder instanceof ViewHolderPolymorph) {
             final ViewHolderPolymorph viewHolderPolymorph = (ViewHolderPolymorph) holder;
 
-            viewHolderPolymorph.button.setText(componentCommand.getCommandName());
+            viewHolderPolymorph.getButton().setText(componentCommand.getCommandName());
         }
 
         CommandParameterWrapper parameter = null;
@@ -189,12 +189,12 @@ class CommandsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             text = componentCommand.getCommandName() + " " + parameter.getParameterName() + ":";
             text = text.replace("_", "");
 
-            viewHolderLed.toggler.setText(text);
+            viewHolderLed.getToggler().setText(text);
 
             if (parameter.getValue() != null) {
                 boolean isLightOn = Boolean.parseBoolean(parameter.getValue().getValue());
 
-                viewHolderLed.toggler.setChecked(isLightOn);
+                viewHolderLed.getToggler().setChecked(isLightOn);
             }
         } else if (holder instanceof ViewHolderSpinner) {
             final ViewHolderSpinner viewHolderSpinner = (ViewHolderSpinner) holder;
@@ -202,13 +202,13 @@ class CommandsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             text = parameter.getParameterName() + ":";
             text = text.replace("_", "");
 
-            viewHolderSpinner.spinner.setPrompt(text);
+            viewHolderSpinner.getSpinner().setPrompt(text);
 
             if (parameter.getValue() != null) {
                 String value = parameter.getValue().getValue();
 
                 viewHolderSpinner.setOnItemSelectedListener(false);
-                viewHolderSpinner.spinner.setSelection(viewHolderSpinner.arrayAdapter.getPosition(value));
+                viewHolderSpinner.getSpinner().setSelection(viewHolderSpinner.getArrayAdapter().getPosition(value));
                 viewHolderSpinner.setOnItemSelectedListener(true);
             } else {
                 viewHolderSpinner.setOnItemSelectedListener(true);
@@ -219,29 +219,35 @@ class CommandsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             text = componentCommand.getCommandName() + " (" + parameter.getParameterName() + "): ";
             text = text.replace("_", "");
 
-            viewHolderEditNumber.textView.setText(text);
+            viewHolderEditNumber.getTextView().setText(text);
 
-            if (parameter.getValue() != null) {
-                Long value = Long.parseLong(parameter.getValue().getValue());
-
-                text = value.toString();
-
-                viewHolderEditNumber.button.setText(text);
+            if (parameter.getValue() == null) {
+                return;
             }
+
+            if (parameter.getValue().getValue().contains(".")) {
+                Double value = Double.parseDouble(parameter.getValue().getValue());
+                text = value.toString();
+            } else {
+                Long value = Long.parseLong(parameter.getValue().getValue());
+                text = value.toString();
+            }
+
+            viewHolderEditNumber.getButton().setText(text);
         } else if (holder instanceof ViewHolderEditNumberPicker) {
             final ViewHolderEditNumberPicker viewHolderEditNumberPicker = (ViewHolderEditNumberPicker) holder;
 
             text = componentCommand.getCommandName() + " (" + parameter.getParameterName() + "): ";
             text = text.replace("_", "");
 
-            viewHolderEditNumberPicker.textView.setText(text);
+            viewHolderEditNumberPicker.getTextView().setText(text);
 
             if (parameter.getValue() != null) {
                 Long value = Long.parseLong(parameter.getValue().getValue());
 
                 text = value.toString();
 
-                viewHolderEditNumberPicker.button.setText(text);
+                viewHolderEditNumberPicker.getButton().setText(text);
             }
         } else if (holder instanceof ViewHolderEditText) {
             final ViewHolderEditText viewHolderEditNumber = (ViewHolderEditText) holder;
@@ -249,10 +255,10 @@ class CommandsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             text = componentCommand.getCommandName() + " (" + parameter.getParameterName() + "): ";
             text = text.replace("_", "");
 
-            viewHolderEditNumber.textView.setText(text);
+            viewHolderEditNumber.getTextView().setText(text);
 
             if (parameter.getValue() != null) {
-                viewHolderEditNumber.button.setText(parameter.getValue().toString());
+                viewHolderEditNumber.getButton().setText(parameter.getValue().getValue());
             }
         }
     }

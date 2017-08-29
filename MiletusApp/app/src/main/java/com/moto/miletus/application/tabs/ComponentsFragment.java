@@ -24,7 +24,6 @@
 
 package com.moto.miletus.application.tabs;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -39,8 +38,11 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 
 import com.moto.miletus.application.R;
+import com.moto.miletus.application.utils.MqttSettingsActivity;
 import com.moto.miletus.application.utils.Strings;
 import com.moto.miletus.gson.info.TinyDevice;
+import com.moto.miletus.mqtt.SendMqttComponents;
+import com.moto.miletus.mqtt.SendMqttTraits;
 import com.moto.miletus.wrappers.DeviceProvider;
 import com.moto.miletus.ble.commands.SendComponentsGattCommand;
 import com.moto.miletus.ble.commands.SendTraitsGattCommand;
@@ -48,8 +50,13 @@ import com.moto.miletus.mdns.SendComponentsCommand;
 import com.moto.miletus.mdns.SendTraitsCommand;
 import com.moto.miletus.application.utils.CustomExceptionHandler;
 import com.moto.miletus.wrappers.DeviceWrapper;
-import com.moto.miletus.wrappers.StateWrapper;
 import com.moto.miletus.wrappers.ComponentWrapper;
+import com.moto.miletus.wrappers.StateWrapper;
+
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttException;
 
 import java.util.Set;
 
@@ -60,13 +67,16 @@ public class ComponentsFragment extends Fragment
         implements SendTraitsCommand.OnTraitsResponse,
         SendComponentsCommand.OnComponentsResponse,
         SendTraitsGattCommand.OnBleTraitsResponse,
-        SendComponentsGattCommand.OnBleComponentsResponse {
+        SendComponentsGattCommand.OnBleComponentsResponse,
+        SendMqttTraits.OnMqttTraitsResponse,
+        SendMqttComponents.OnMqttComponentsResponse {
     private static final String TAG = ComponentsFragment.class.getSimpleName();
 
     private ComponentsAdapter componentsAdapter;
     private RelativeLayout progressBarLayout;
     private ProgressBar progressBar;
     private DeviceWrapper mDevice;
+    private MqttAndroidClient mqttClient;
 
     @Override
     public View onCreateView(LayoutInflater inflater,
@@ -134,29 +144,142 @@ public class ComponentsFragment extends Fragment
         getTraits();
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+        MqttSettingsActivity.mqttDisconnect(mqttClient);
+    }
+
+    /**
+     * sendMqttTraits
+     */
+    private void sendMqttTraits() {
+        if (mqttClient != null
+                && mqttClient.isConnected()) {
+            new SendMqttTraits(mqttClient,
+                    mDevice.getMqttInfo().getTopic(),
+                    ComponentsFragment.this).execute();
+            return;
+        } else {
+            setMqttClient();
+        }
+
+        try {
+            mqttClient.connect(MqttSettingsActivity.getOptions(), null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    Log.i(TAG, "onSuccess");
+                    new SendMqttTraits(mqttClient,
+                            mDevice.getMqttInfo().getTopic(),
+                            ComponentsFragment.this).execute();
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken,
+                                      Throwable exception) {
+                    Log.e(TAG, "onFailure");
+                    mqttClient = null;
+                    showSnackbar(R.string.conn_fail);
+                }
+            });
+        } catch (MqttException e) {
+            Log.e(TAG, e.toString());
+            showSnackbar(R.string.conn_fail);
+        }
+    }
+
+    /**
+     * setMqttClient
+     */
+    private void setMqttClient() {
+        if (mqttClient == null) {
+            mqttClient = new MqttAndroidClient(this.getContext(),
+                    mDevice.getMqttInfo().getMqttServerURI(),
+                    mDevice.getMqttInfo().getClientId());
+        }
+    }
+
+    /**
+     * sendMqttComponents
+     *
+     * @param components Set<ComponentWrapper>
+     */
+    private void sendMqttComponents(final Set<ComponentWrapper> components) {
+        if (mqttClient != null
+                && mqttClient.isConnected()) {
+            new SendMqttComponents(mqttClient,
+                    mDevice.getMqttInfo().getTopic(),
+                    components,
+                    ComponentsFragment.this).execute();
+            return;
+        } else {
+            setMqttClient();
+        }
+
+        try {
+            mqttClient.connect(MqttSettingsActivity.getOptions(), null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    Log.i(TAG, "onSuccess");
+                    new SendMqttComponents(mqttClient,
+                            mDevice.getMqttInfo().getTopic(),
+                            components,
+                            ComponentsFragment.this).execute();
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken,
+                                      Throwable exception) {
+                    Log.e(TAG, "onFailure");
+                    mqttClient = null;
+                    showSnackbar(R.string.conn_fail);
+                }
+            });
+        } catch (MqttException e) {
+            Log.e(TAG, e.toString());
+            showSnackbar(R.string.conn_error);
+        }
+    }
+
+    /**
+     * showSnackbar
+     *
+     * @param id int
+     */
+    private void showSnackbar(int id) {
+        if (ComponentsFragment.this.getView() != null) {
+            Snackbar.make(ComponentsFragment.this.getView(),
+                    id,
+                    Snackbar.LENGTH_SHORT)
+                    .show();
+        }
+    }
+
     /**
      * Call getTraitDefinitions API
      */
     public void getTraits() {
-        if (mDevice.getBleDevice() == null) {
-            final SendTraitsCommand sendTraitsCommand = new SendTraitsCommand(mDevice.getDevice(),
-                    this);
-            try {
-                sendTraitsCommand.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-            } catch (OutOfMemoryError e) {
-                Log.e(TAG, e.toString());
-                sendTraitsCommand.execute();
-            }
-        } else {
-            final SendTraitsGattCommand sendTraitsGattCommand = new SendTraitsGattCommand(this.getContext(),
+        if (mDevice.getMqttInfo() != null) {
+            sendMqttTraits();
+        } else if (mDevice.getBleDevice() != null) {
+            new SendTraitsGattCommand(this.getContext(),
                     this,
-                    mDevice.getBleDevice());
-            try {
-                sendTraitsGattCommand.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-            } catch (OutOfMemoryError e) {
-                Log.e(TAG, e.toString());
-                sendTraitsGattCommand.execute();
-            }
+                    mDevice.getBleDevice()).execute();
+        } else {
+            new SendTraitsCommand(mDevice,
+                    this).execute();
+        }
+    }
+
+    @Override
+    public void onMqttTraitsResponse(final Set<ComponentWrapper> components,
+                                     boolean isSuccess) {
+        if (!isSuccess) {
+            Log.e(TAG, "Failure getting TraitDefinitions by MQTT.");
+            showSnackbar(R.string.error_getting_traits);
+        } else {
+            Log.i(TAG, "Success getting TraitDefinitions by MQTT: " + components.size());
+            getStates(components);
         }
     }
 
@@ -164,25 +287,13 @@ public class ComponentsFragment extends Fragment
     public void onBleTraitsResponse(final Set<ComponentWrapper> components,
                                     final boolean isSuccess) {
         if (!isSuccess) {
-            Log.e(TAG, "Failure getting TraitDefinitions.");
-            if (ComponentsFragment.this.getView() != null) {
-                Snackbar.make(ComponentsFragment.this.getView(),
-                        R.string.error_getting_traits,
-                        Snackbar.LENGTH_LONG)
-                        .show();
-            }
-            final SendTraitsGattCommand sendTraitsGattCommand = new SendTraitsGattCommand(this.getContext(),
+            Log.e(TAG, "Failure getting TraitDefinitions by BLE.");
+            showSnackbar(R.string.error_getting_traits);
+            new SendTraitsGattCommand(this.getContext(),
                     this,
-                    mDevice.getBleDevice());
-            try {
-                sendTraitsGattCommand.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-            } catch (OutOfMemoryError e) {
-                Log.e(TAG, e.toString());
-                sendTraitsGattCommand.execute();
-            }
+                    mDevice.getBleDevice()).execute();
         } else {
-            Log.i(TAG, "Success getting TraitDefinitions: " + components.size());
-
+            Log.i(TAG, "Success getting TraitDefinitions by BLE: " + components.size());
             getStates(components);
         }
     }
@@ -191,16 +302,10 @@ public class ComponentsFragment extends Fragment
     public void onTraitsResponse(final Set<ComponentWrapper> components,
                                  final boolean isSuccess) {
         if (!isSuccess) {
-            Log.e(TAG, "Failure getting TraitDefinitions.");
-            if (ComponentsFragment.this.getView() != null) {
-                Snackbar.make(ComponentsFragment.this.getView(),
-                        R.string.error_getting_traits,
-                        Snackbar.LENGTH_LONG)
-                        .show();
-            }
+            Log.e(TAG, "Failure getting TraitDefinitions by Wifi.");
+            showSnackbar(R.string.error_getting_traits);
         } else {
-            Log.i(TAG, "Success getting TraitDefinitions: " + components.size());
-
+            Log.i(TAG, "Success getting TraitDefinitions by Wifi: " + components.size());
             getStates(components);
         }
     }
@@ -210,27 +315,17 @@ public class ComponentsFragment extends Fragment
      * and extracts the data related to the current state.
      */
     private void getStates(final Set<ComponentWrapper> components) {
-        if (mDevice.getBleDevice() == null) {
-            final SendComponentsCommand sendComponentsCommand = new SendComponentsCommand(mDevice.getDevice(),
+        if (mDevice.getMqttInfo() != null) {
+            sendMqttComponents(components);
+        } else if (mDevice.getBleDevice() == null) {
+            new SendComponentsCommand(mDevice,
                     this,
-                    components);
-            try {
-                sendComponentsCommand.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-            } catch (OutOfMemoryError e) {
-                Log.e(TAG, e.toString());
-                sendComponentsCommand.execute();
-            }
+                    components).execute();
         } else {
-            final SendComponentsGattCommand sendComponentsGattCommand = new SendComponentsGattCommand(this.getContext(),
+            new SendComponentsGattCommand(this.getContext(),
                     this,
                     mDevice,
-                    components);
-            try {
-                sendComponentsGattCommand.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-            } catch (OutOfMemoryError e) {
-                Log.e(TAG, e.toString());
-                sendComponentsGattCommand.execute();
-            }
+                    components).execute();
         }
     }
 
@@ -240,28 +335,15 @@ public class ComponentsFragment extends Fragment
                                         final DeviceWrapper device,
                                         final boolean isSuccess) {
         if (!isSuccess) {
-            Log.e(TAG, "Failure querying for state.");
-            if (ComponentsFragment.this.getView() != null) {
-                Snackbar.make(ComponentsFragment.this.getView(),
-                        R.string.error_querying_state,
-                        Snackbar.LENGTH_LONG)
-                        .show();
-            }
-
-            final SendComponentsGattCommand sendComponentsGattCommand = new SendComponentsGattCommand(this.getContext(),
+            Log.e(TAG, "Failure querying for state by BLE.");
+            showSnackbar(R.string.error_querying_state);
+            new SendComponentsGattCommand(this.getContext(),
                     this,
                     mDevice,
-                    components);
-            try {
-                sendComponentsGattCommand.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-            } catch (OutOfMemoryError e) {
-                Log.e(TAG, e.toString());
-                sendComponentsGattCommand.execute();
-            }
-
+                    components).execute();
             return;
         } else {
-            Log.i(TAG, "Success getting states: " + components.size());
+            Log.i(TAG, "Success getting states by BLE: " + states.size());
         }
 
         addComponents(components);
@@ -273,16 +355,26 @@ public class ComponentsFragment extends Fragment
                                      final TinyDevice device,
                                      final boolean isSuccess) {
         if (!isSuccess) {
-            Log.e(TAG, "Failure querying for state.");
-            if (ComponentsFragment.this.getView() != null) {
-                Snackbar.make(ComponentsFragment.this.getView(),
-                        R.string.error_querying_state,
-                        Snackbar.LENGTH_LONG)
-                        .show();
-            }
+            Log.e(TAG, "Failure querying for state by Wifi.");
+            showSnackbar(R.string.error_querying_state);
             return;
         } else {
-            Log.i(TAG, "Success getting states: " + components.size());
+            Log.i(TAG, "Success getting states by Wifi: " + states.size());
+        }
+
+        addComponents(components);
+    }
+
+    @Override
+    public void onMqttComponentsResponse(final Set<ComponentWrapper> components,
+                                         final boolean isSuccess) {
+
+        if (!isSuccess) {
+            Log.e(TAG, "Failure querying states by MQTT.");
+            showSnackbar(R.string.error_querying_state);
+            return;
+        } else {
+            Log.i(TAG, "Success getting states by MQTT: " + components.size());
         }
 
         addComponents(components);

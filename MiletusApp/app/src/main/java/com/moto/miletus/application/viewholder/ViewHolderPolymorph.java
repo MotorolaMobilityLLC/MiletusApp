@@ -1,4 +1,4 @@
-/*************************************************************************
+/*
  * The MIT License (MIT)
  * Copyright (c) 2016 Gustavo Frederico Temple Pedrosa -- gustavof@motorola.com
  * <p>
@@ -20,7 +20,7 @@
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *************************************************************************/
+ */
 
 package com.moto.miletus.application.viewholder;
 
@@ -55,8 +55,7 @@ import java.util.List;
 public class ViewHolderPolymorph extends RecyclerView.ViewHolder {
 
     private static final String TAG = ViewHolderPolymorph.class.getSimpleName();
-
-    public final Button button;
+    private final Button button;
 
     /**
      * ViewHolderPolymorph
@@ -79,6 +78,15 @@ public class ViewHolderPolymorph extends RecyclerView.ViewHolder {
                 Log.i(TAG, "Button click: " + ViewHolderPolymorph.this.button.getText());
             }
         });
+    }
+
+    /**
+     * getButton
+     *
+     * @return Button
+     */
+    public Button getButton() {
+        return button;
     }
 
     /**

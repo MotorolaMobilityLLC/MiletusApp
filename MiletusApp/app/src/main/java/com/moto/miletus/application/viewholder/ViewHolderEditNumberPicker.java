@@ -1,4 +1,4 @@
-/*************************************************************************
+/*
  * The MIT License (MIT)
  * Copyright (c) 2016 Gustavo Frederico Temple Pedrosa -- gustavof@motorola.com
  * <p>
@@ -20,7 +20,7 @@
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *************************************************************************/
+ */
 
 package com.moto.miletus.application.viewholder;
 
@@ -88,11 +88,11 @@ public class ViewHolderEditNumberPicker extends ViewHolderEditValue {
                         }
 
                         // Update the UI to reflect new state.
-                        button.setText(input.getValue() + "");
+                        getButton().setText(input.getValue() + "");
 
                         // Run the command
                         runCommandListener.onRunCommand(command.getCommand());
-                        Log.i(TAG, "Button click: " + ViewHolderEditNumberPicker.this.button.getText().toString());
+                        Log.i(TAG, "Button click: " + ViewHolderEditNumberPicker.this.getButton().getText().toString());
                     }
                 });
 

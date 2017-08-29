@@ -1,4 +1,4 @@
-/*************************************************************************
+/*
  * The MIT License (MIT)
  * Copyright (c) 2016 Gustavo Frederico Temple Pedrosa -- gustavof@motorola.com
  * <p>
@@ -20,7 +20,7 @@
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *************************************************************************/
+ */
 
 package com.moto.miletus.application.viewholder;
 
@@ -46,8 +46,8 @@ public class ViewHolderSpinner extends RecyclerView.ViewHolder {
 
     private static final String TAG = ViewHolderSpinner.class.getSimpleName();
 
-    public final Spinner spinner;
-    public final ArrayAdapter<String> arrayAdapter;
+    private final Spinner spinner;
+    private final ArrayAdapter<String> arrayAdapter;
     private int checkFirst = 0;
     private AdapterView.OnItemSelectedListener onItemSelectedListener = null;
 
@@ -108,6 +108,24 @@ public class ViewHolderSpinner extends RecyclerView.ViewHolder {
                 Log.i(TAG, "onNothingSelected");
             }
         };
+    }
+
+    /**
+     * getSpinner
+     *
+     * @return Spinner
+     */
+    public Spinner getSpinner() {
+        return spinner;
+    }
+
+    /**
+     * getArrayAdapter
+     *
+     * @return ArrayAdapter
+     */
+    public ArrayAdapter<String> getArrayAdapter() {
+        return arrayAdapter;
     }
 
     /**

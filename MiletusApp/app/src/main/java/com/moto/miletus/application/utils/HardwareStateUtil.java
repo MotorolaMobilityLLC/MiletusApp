@@ -1,4 +1,4 @@
-/*************************************************************************
+/*
  * The MIT License (MIT)
  * Copyright (c) 2016 Gustavo Frederico Temple Pedrosa -- gustavof@motorola.com
  * <p>
@@ -20,7 +20,7 @@
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *************************************************************************/
+ */
 
 package com.moto.miletus.application.utils;
 
@@ -29,6 +29,8 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 
 /**
@@ -56,7 +58,8 @@ public final class HardwareStateUtil {
      * @return if hasBluetoothLe
      */
     public static boolean hasBluetoothLe(final Context context) {
-        return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
+        return context.getApplicationContext().getPackageManager()
+                .hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
     }
 
     /**
@@ -67,7 +70,7 @@ public final class HardwareStateUtil {
      */
     public static boolean isWifiEnabled(final Context context) {
         final WifiManager wifiManager = (WifiManager)
-                context.getSystemService(Context.WIFI_SERVICE);
+                context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         return wifiManager.isWifiEnabled();
     }
 
@@ -79,8 +82,33 @@ public final class HardwareStateUtil {
      */
     public static boolean isNetworkConnected(final Context context) {
         final ConnectivityManager cm = (ConnectivityManager)
-                context.getSystemService(Context.CONNECTIVITY_SERVICE);
+                context.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
         final NetworkInfo netInfo = cm.getActiveNetworkInfo();
         return netInfo != null && netInfo.isConnectedOrConnecting();
     }
+
+
+    /**
+     * getSSID
+     *
+     * @param context Context
+     * @return SSID
+     */
+    public static String getSSID(final Context context) {
+        if (!isWifiEnabled(context)
+                || !isNetworkConnected(context)) {
+            return "";
+        }
+
+        final WifiManager wifiManager = (WifiManager)
+                context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        final WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+        if (wifiInfo != null
+                && wifiInfo.getSupplicantState() == SupplicantState.COMPLETED) {
+            return wifiInfo.getSSID();
+        }
+
+        return "";
+    }
+
 }

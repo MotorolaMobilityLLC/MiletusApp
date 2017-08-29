@@ -24,7 +24,6 @@
 
 package com.moto.miletus.application.tabs;
 
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
@@ -38,7 +37,9 @@ import android.view.ViewGroup;
 
 import com.moto.miletus.application.OnRunCommandListener;
 import com.moto.miletus.application.R;
+import com.moto.miletus.application.utils.MqttSettingsActivity;
 import com.moto.miletus.application.utils.Strings;
+import com.moto.miletus.mqtt.SendMqttExecute;
 import com.moto.miletus.wrappers.DeviceProvider;
 import com.moto.miletus.ble.commands.SendExecuteGattCommand;
 import com.moto.miletus.mdns.SendExecuteCommand;
@@ -47,6 +48,11 @@ import com.moto.miletus.wrappers.CommandWrapper;
 import com.moto.miletus.wrappers.ComponentWrapper;
 import com.moto.miletus.wrappers.DeviceWrapper;
 import com.moto.miletus.wrappers.ComponentProvider;
+
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttException;
 
 /**
  * Handles the RecyclerView
@@ -58,21 +64,30 @@ public class CommandsFragment extends Fragment implements OnRunCommandListener {
     private CommandsAdapter commandsAdapter;
     private DeviceWrapper mDevice;
     private ComponentWrapper mComponent;
+    private MqttAndroidClient mqttClient;
 
     private final SendExecuteCommand.OnExecuteCommandResponse executeCommandResponse =
             new SendExecuteCommand.OnExecuteCommandResponse() {
                 @Override
                 public void onExecuteCommandResponse(boolean isSuccess) {
                     if (!isSuccess) {
-                        Log.e(TAG, "Failure setting state.");
-                        if (CommandsFragment.this.getView() != null) {
-                            Snackbar.make(CommandsFragment.this.getView(),
-                                    R.string.error_setting_state,
-                                    Snackbar.LENGTH_LONG)
-                                    .show();
-                        }
+                        Log.e(TAG, "Failure setting state by Wifi.");
+                        showSnackbar(R.string.error_setting_state);
                     } else {
-                        Log.i(TAG, "Success setting state!");
+                        Log.i(TAG, "Success setting state by Wifi.");
+                    }
+                }
+            };
+
+    private final SendMqttExecute.OnMqttExecuteResponse mqttExecuteResponse =
+            new SendMqttExecute.OnMqttExecuteResponse() {
+                @Override
+                public void onMqttExecuteResponse(boolean isSuccess) {
+                    if (!isSuccess) {
+                        Log.e(TAG, "Failure setting state by MQTT.");
+                        showSnackbar(R.string.error_setting_state);
+                    } else {
+                        Log.i(TAG, "Success setting state by MQTT.");
                     }
                 }
             };
@@ -82,21 +97,17 @@ public class CommandsFragment extends Fragment implements OnRunCommandListener {
                 @Override
                 public void onBleExecuteResponse(boolean isSuccess) {
                     if (!isSuccess) {
-                        Log.e(TAG, "Failure setting state.");
-                        if (CommandsFragment.this.getView() != null) {
-                            Snackbar.make(CommandsFragment.this.getView(),
-                                    R.string.error_setting_state,
-                                    Snackbar.LENGTH_LONG)
-                                    .show();
-                        }
+                        Log.e(TAG, "Failure setting state by BLE.");
+                        showSnackbar(R.string.error_setting_state);
                     } else {
-                        Log.i(TAG, "Success setting state!");
+                        Log.i(TAG, "Success setting state by BLE.");
                     }
                 }
             };
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(LayoutInflater inflater,
+                             ViewGroup container,
                              Bundle savedInstanceState) {
 
         final View commandsLayout = inflater.inflate(R.layout.fragment_commands, container, false);
@@ -168,40 +179,96 @@ public class CommandsFragment extends Fragment implements OnRunCommandListener {
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        MqttSettingsActivity.mqttDisconnect(mqttClient);
+    }
+
+    /**
+     * setMqttClient
+     */
+    private void setMqttClient() {
+        if (mqttClient == null) {
+            mqttClient = new MqttAndroidClient(this.getContext(),
+                    mDevice.getMqttInfo().getMqttServerURI(),
+                    mDevice.getMqttInfo().getClientId());
+        }
+    }
+
+    /**
+     * showSnackbar
+     *
+     * @param id int
+     */
+    private void showSnackbar(int id) {
+        if (CommandsFragment.this.getView() != null) {
+            Snackbar.make(CommandsFragment.this.getView(),
+                    id,
+                    Snackbar.LENGTH_SHORT)
+                    .show();
+        }
+    }
+
+    @Override
     public void onRunCommand(final String command) {
-        if (mDevice.getBleDevice() == null) {
-            if (CommandsFragment.this.getView() != null) {
-                Snackbar.make(CommandsFragment.this.getView(),
-                        R.string.send_by_wifi,
-                        Snackbar.LENGTH_SHORT)
-                        .show();
-            }
-            final SendExecuteCommand sendExecuteCommand = new SendExecuteCommand(mDevice.getDevice(),
-                    executeCommandResponse,
-                    command);
-            try {
-                sendExecuteCommand.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-            } catch (OutOfMemoryError e) {
-                Log.e(TAG, e.toString());
-                sendExecuteCommand.execute();
-            }
-        } else {
-            if (CommandsFragment.this.getView() != null) {
-                Snackbar.make(CommandsFragment.this.getView(),
-                        R.string.send_by_ble,
-                        Snackbar.LENGTH_SHORT)
-                        .show();
-            }
-            final SendExecuteGattCommand sendExecuteCommand = new SendExecuteGattCommand(this.getContext(),
+        if (mDevice.getMqttInfo() != null) {
+            showSnackbar(R.string.send_by_mqtt);
+            sendMqttExecute(command);
+        } else if (mDevice.getBleDevice() != null) {
+            showSnackbar(R.string.send_by_ble);
+            new SendExecuteGattCommand(this.getContext(),
                     bleExecuteResponse,
                     mDevice.getBleDevice(),
-                    command);
-            try {
-                sendExecuteCommand.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-            } catch (OutOfMemoryError e) {
-                Log.e(TAG, e.toString());
-                sendExecuteCommand.execute();
-            }
+                    command).execute();
+        } else {
+            showSnackbar(R.string.send_by_wifi);
+            new SendExecuteCommand(mDevice,
+                    executeCommandResponse,
+                    command).execute();
+        }
+    }
+
+    /**
+     * sendMqttExecute
+     *
+     * @param command String
+     */
+    private void sendMqttExecute(final String command) {
+        if (mqttClient != null
+                && mqttClient.isConnected()) {
+            new SendMqttExecute(mqttClient,
+                    mDevice.getMqttInfo().getTopic(),
+                    command,
+                    mqttExecuteResponse).execute();
+            return;
+        } else {
+            setMqttClient();
+        }
+
+        try {
+            mqttClient.connect(MqttSettingsActivity.getOptions(),
+                    null,
+                    new IMqttActionListener() {
+                        @Override
+                        public void onSuccess(IMqttToken asyncActionToken) {
+                            Log.i(TAG, "onSuccess");
+                            new SendMqttExecute(mqttClient,
+                                    mDevice.getMqttInfo().getTopic(),
+                                    command,
+                                    mqttExecuteResponse).execute();
+                        }
+
+                        @Override
+                        public void onFailure(IMqttToken asyncActionToken,
+                                              Throwable exception) {
+                            Log.e(TAG, "onFailure");
+                            mqttClient = null;
+                            showSnackbar(R.string.conn_fail);
+                        }
+                    });
+        } catch (MqttException e) {
+            Log.e(TAG, e.toString());
+            showSnackbar(R.string.conn_error);
         }
     }
 }

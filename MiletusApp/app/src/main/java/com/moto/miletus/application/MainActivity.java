@@ -33,12 +33,15 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.net.nsd.NsdServiceInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -47,16 +50,20 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.ProgressBar;
+import android.widget.EditText;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
 import com.moto.miletus.application.ble.neardevice.NearDeviceHolder;
 import com.moto.miletus.application.utils.LicenseDialog;
+import com.moto.miletus.application.utils.MqttSettingsActivity;
 import com.moto.miletus.ble.BleScanService;
 import com.moto.miletus.ble.commands.SendInfoGattCommand;
 import com.moto.miletus.gson.info.TinyDevice;
@@ -66,7 +73,15 @@ import com.moto.miletus.application.utils.AboutActivity;
 import com.moto.miletus.application.utils.CustomExceptionHandler;
 import com.moto.miletus.application.utils.HardwareStateUtil;
 import com.moto.miletus.application.utils.Strings;
+import com.moto.miletus.mqtt.SendMqttInfo;
 import com.moto.miletus.wrappers.DeviceWrapper;
+import com.moto.miletus.wrappers.MqttInfoWrapper;
+
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttException;
 
 /**
  * MainActivity
@@ -76,20 +91,27 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
 
+    private MqttAndroidClient mqttClient;
     private DeviceListAdapter mDeviceListAdapter;
     private final DeviceRoomReceiver deviceRoomReceiver = new DeviceRoomReceiver();
     private final NearDeviceHolder nearDeviceHolder = new NearDeviceHolder(this, System.currentTimeMillis());
     private RecyclerView recyclerView;
     private RelativeLayout progressBarLayout;
-    private ProgressBar progressBar;
+    private TextView noDevices;
     private Snackbar error;
     private boolean isBleStarted = false;
 
     private final SendInfoCommand.OnInfoResponse onInfoResponse = new SendInfoCommand.OnInfoResponse() {
         @Override
-        public void onInfoResponse(final TinyDevice device) {
-            final DeviceWrapper deviceWrapper = new DeviceWrapper(device, null);
-            if (mDeviceListAdapter.containsName(deviceWrapper) == null) {
+        public void onInfoResponse(final TinyDevice device,
+                                   final NsdServiceInfo nsdServiceInfo) {
+            final DeviceWrapper deviceWrapper = new DeviceWrapper(device,
+                    null,
+                    null,
+                    nsdServiceInfo,
+                    HardwareStateUtil.getSSID(getApplicationContext()));
+
+            if (mDeviceListAdapter.contains(deviceWrapper) == null) {
                 addDevice(deviceWrapper);
                 Log.i(TAG, "Device added: " + device.getName());
             } else {
@@ -101,12 +123,39 @@ public class MainActivity extends AppCompatActivity {
     private final SendInfoGattCommand.OnBleInfoResponse onBleInfoResponse = new SendInfoGattCommand.OnBleInfoResponse() {
         @Override
         public void onBleInfoResponse(final DeviceWrapper device) {
-            if (mDeviceListAdapter.containsBle(device) == null) {
+            if (mDeviceListAdapter.contains(device) == null) {
                 addDevice(device);
                 Log.i(TAG, "Device BLE added: " + device.getDevice().getName());
             } else {
                 Log.e(TAG, "Device BLE not added: " + device.getDevice().getName());
             }
+        }
+    };
+
+    private final SendMqttInfo.OnMqttInfoResponse onMqttInfoResponse = new SendMqttInfo.OnMqttInfoResponse() {
+        @Override
+        public void onSuccess(final TinyDevice device,
+                              final String topic) {
+            final DeviceWrapper deviceWrapper = new DeviceWrapper(device,
+                    null,
+                    new MqttInfoWrapper(mqttClient.getServerURI(),
+                            mqttClient.getClientId(),
+                            topic),
+                    null,
+                    null);
+            if (mDeviceListAdapter.contains(deviceWrapper) == null) {
+                addDevice(deviceWrapper);
+                Log.i(TAG, "Device MQTT added: " + device.getName());
+            } else {
+                showError(R.string.device_added);
+                Log.e(TAG, "Device MQTT not added: " + device.getName());
+            }
+        }
+
+        @Override
+        public void onFail(final String topic) {
+            Log.e(TAG, "Device MQTT not added: " + topic);
+            showError(R.string.error_querying_device);
         }
     };
 
@@ -140,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
 
         recyclerView = (RecyclerView) findViewById(R.id.devices_list);
         progressBarLayout = (RelativeLayout) findViewById(R.id.progressBarLayout);
-        progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        noDevices = (TextView) findViewById(R.id.no_devices);
 
         // use this setting to improve performance if you know that changes
         // in content do not change the layout size of the RecyclerView
@@ -154,10 +203,87 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(mDeviceListAdapter);
         mDeviceListAdapter.clear();
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        final Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mqttConnect();
+            }
+        });
+
         NsdHelper.getInstance().setOnInfoResponse(onInfoResponse);
+    }
+
+    private void showDialog() {
+        final EditText edittext = new EditText(this);
+        edittext.setGravity(Gravity.CENTER_HORIZONTAL);
+        final AlertDialog.Builder alert = new AlertDialog.Builder(this);
+        alert.setTitle("Device Topic");
+        alert.setMessage("Enter the device topic: ");
+        alert.setView(edittext);
+        alert.setPositiveButton("Add device", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog,
+                                int whichButton) {
+                new SendMqttInfo(mqttClient,
+                        edittext.getText().toString(),
+                        onMqttInfoResponse).execute();
+            }
+        });
+
+        alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog,
+                                int whichButton) {
+            }
+        });
+
+        alert.show();
+    }
+
+    /**
+     * mqttConnect
+     */
+    private void mqttConnect() {
+        final SharedPreferences sharedPreferences = getSharedPreferences(Strings.MQTT_SETTINGS,
+                Context.MODE_PRIVATE);
+
+        if (mqttClient == null) {
+            mqttClient = new MqttAndroidClient(getApplicationContext(),
+                    Strings.TCP
+                            + sharedPreferences.getString(Strings.MQTT_IP,
+                            Strings.MQTT_DEFAULT_IP)
+                            + ":"
+                            + sharedPreferences.getString(Strings.MQTT_PORT,
+                            Strings.MQTT_DEFAULT_PORT),
+                    MqttClient.generateClientId());
+        }
+
+        if (mqttClient.isConnected()) {
+            showDialog();
+            return;
+        }
+
+        try {
+            mqttClient.connect(MqttSettingsActivity.getOptions(), null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    Log.i(TAG, "onSuccess");
+                    showDialog();
+                }
+
+                @Override
+                public void onFailure(IMqttToken token,
+                                      Throwable e) {
+                    showError(R.string.conn_fail);
+                    mqttClient = null;
+                }
+            });
+        } catch (MqttException e) {
+            showError(R.string.conn_error);
+            mqttClient = null;
+        }
     }
 
     /**
@@ -168,7 +294,7 @@ public class MainActivity extends AppCompatActivity {
     private void addDevice(final DeviceWrapper device) {
         runOnUiThread(new Runnable() {
             public void run() {
-                progressBar.setVisibility(View.GONE);
+                noDevices.setVisibility(View.GONE);
                 progressBarLayout.setVisibility(View.GONE);
 
                 mDeviceListAdapter.add(device);
@@ -182,7 +308,56 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         checkAndroidVersion();
         checkHardwareState();
-        checkPermission();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            checkPermission();
+        } else {
+            startBleSettings();
+            isBleStarted = true;
+        }
+
+        loadDevices();
+        //sendBroadcast(new Intent(Strings.CLOUD_SERVICE));
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        MqttSettingsActivity.mqttDisconnect(mqttClient);
+    }
+
+    /**
+     * loadDevices
+     */
+    private void loadDevices() {
+        for (final String deviceWrapper : mDeviceListAdapter.loadDevices(getApplicationContext())) {
+            final DeviceWrapper device = new Gson().fromJson(deviceWrapper, DeviceWrapper.class);
+
+            if (device.getMqttInfo() != null
+                    && mDeviceListAdapter.contains(device) == null) {
+                addDevice(device);
+                Log.i(TAG, "Device MQTT loaded: " + device.getDevice().getName());
+                continue;
+            }
+
+            if (device.getAliveSecs() < DeviceWrapper.KEEP_ALIVE_SECS
+                    && mDeviceListAdapter.contains(device) == null) {
+                if (device.getBleDevice() != null) {
+                    addDevice(device);
+                    Log.i(TAG, "Device BLE loaded: " + device.getDevice().getName());
+                    continue;
+                }
+
+                if (HardwareStateUtil.getSSID(getApplicationContext())
+                        .equalsIgnoreCase(device.getSsidOrigin())) {
+                    addDevice(device);
+                    Log.i(TAG, "Device loaded: " + device.getDevice().getName());
+                    continue;
+                }
+            }
+
+            Log.e(TAG, "Device not loaded: " + device.getDevice().getName());
+        }
     }
 
     /**
@@ -190,7 +365,8 @@ public class MainActivity extends AppCompatActivity {
      */
     @TargetApi(Build.VERSION_CODES.M)
     private void checkPermission() {
-        if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
                     PERMISSION_REQUEST_COARSE_LOCATION);
         } else {
@@ -203,6 +379,11 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull final String permissions[],
                                            @NonNull int[] grantResults) {
+
+        if (grantResults.length <= 0) {
+            return;
+        }
+
         switch (requestCode) {
             case PERMISSION_REQUEST_COARSE_LOCATION: {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -276,10 +457,10 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                if (progressBar.getVisibility() != View.VISIBLE
+                /*if (noDevices.getVisibility() != View.VISIBLE
                         || progressBarLayout.getVisibility() != View.VISIBLE) {
                     return;
-                }
+                }*/
 
                 if (recyclerView != null) {
                     error = Snackbar.make(recyclerView,
@@ -317,7 +498,7 @@ public class MainActivity extends AppCompatActivity {
         NsdHelper.getInstance().stopDiscovery();
     }
 
-    final SearchView.OnQueryTextListener listener = new SearchView.OnQueryTextListener() {
+    final private SearchView.OnQueryTextListener listener = new SearchView.OnQueryTextListener() {
         @Override
         public boolean onQueryTextSubmit(String query) {
             mDeviceListAdapter.getFilter().filter(query);
@@ -348,6 +529,9 @@ public class MainActivity extends AppCompatActivity {
             case R.id.about:
                 startActivity(new Intent(this, AboutActivity.class));
                 return true;
+            case R.id.mqtt_settings:
+                startActivity(new Intent(this, MqttSettingsActivity.class));
+                return true;
             case R.id.action_licenses:
                 new LicenseDialog().show(getSupportFragmentManager(), "Show licenses");
                 return true;
@@ -366,7 +550,9 @@ public class MainActivity extends AppCompatActivity {
             NearDeviceHolder.setNearDevice(null);
         }
 
+        mDeviceListAdapter.storeDevices(getApplicationContext());
         mDeviceListAdapter.clear();
+
         super.onDestroy();
     }
 

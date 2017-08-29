@@ -1,4 +1,4 @@
-/*************************************************************************
+/*
  * The MIT License (MIT)
  * Copyright (c) 2016 Gustavo Frederico Temple Pedrosa -- gustavof@motorola.com
  * <p>
@@ -20,7 +20,7 @@
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *************************************************************************/
+ */
 
 package com.moto.miletus.application.viewholder;
 
@@ -35,10 +35,10 @@ import com.moto.miletus.wrappers.CommandWrapper;
 /**
  * ViewHolderEditValue
  */
-public abstract class ViewHolderEditValue extends RecyclerView.ViewHolder {
+abstract class ViewHolderEditValue extends RecyclerView.ViewHolder {
 
-    public final TextView textView;
-    public final Button button;
+    private final TextView textView;
+    private final Button button;
 
     ViewHolderEditValue(final View parentView,
                         final TextView textView,
@@ -54,6 +54,25 @@ public abstract class ViewHolderEditValue extends RecyclerView.ViewHolder {
                 showDialog(v, command, runCommandListener);
             }
         });
+    }
+
+    /**
+     * getTextView
+     *
+     * @return TextView
+     */
+    public TextView getTextView() {
+        return textView;
+    }
+
+    /**
+     * getButton
+     *
+     * @return Button
+     */
+
+    public Button getButton() {
+        return button;
     }
 
     /**
