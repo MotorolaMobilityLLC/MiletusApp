@@ -1,4 +1,4 @@
-/*************************************************************************
+/*
  * The MIT License (MIT)
  * Copyright (c) 2016 Gustavo Frederico Temple Pedrosa -- gustavof@motorola.com
  * <p>
@@ -20,7 +20,7 @@
  * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *************************************************************************/
+ */
 
 package com.moto.miletus.application.viewholder;
 
@@ -42,7 +42,7 @@ public class ViewHolderLed extends RecyclerView.ViewHolder
 
     private static final String TAG = ViewHolderLed.class.getSimpleName();
     private static boolean lightOn = false;
-    public final Switch toggler;
+    private final Switch toggler;
     private final CommandWrapper command;
     private final OnRunCommandListener runCommandListener;
 
@@ -63,6 +63,15 @@ public class ViewHolderLed extends RecyclerView.ViewHolder
         this.command = command;
         this.runCommandListener = runCommandListener;
         this.toggler.setOnClickListener(this);
+    }
+
+    /**
+     * getToggler
+     *
+     * @return Switch
+     */
+    public Switch getToggler() {
+        return toggler;
     }
 
     @Override

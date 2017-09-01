@@ -33,21 +33,43 @@ public final class Strings {
 
     public static final String NEAR_DEVICE = "NearDevice";
 
+    public static final String CLOUD_SERVICE = "CloudService";
+
     public static final String NEW_LINE = System.getProperty("line.separator");
 
     public static final String EXTRA_KEY_DEVICE = BuildConfig.APPLICATION_ID + ".device";
 
     public static final String EXTRA_KEY_DEVICE_COMPONENT = BuildConfig.APPLICATION_ID + ".device_component";
 
-    public static final String light = "light";
+    public static final String LIGHT = "light";
 
-    public static final String temperature = "temperature";
+    public static final String TEMPERATURE = "temperature";
 
-    public static final String humidity = "humidity";
+    public static final String HUMIDITY = "humidity";
 
-    public static final String celsius = "°C";
+    public static final String CELSIUS = "°C";
 
-    public static final String lux = " lux";
+    public static final String LUX = " lux";
+
+    public static final String HASH_MAP = "HashMap";
+
+    public static final String DEVICE_NAME = "DeviceName";
+
+    public static final String SHIELD = "SHIELD";
 
     public static final String _60 = "6.0";
+
+    public static final String STORED_DEVICES = "StoredDevices";
+
+    public static final String MQTT_SETTINGS = "MqttSettings";
+
+    public static final String MQTT_IP = "mqttIp";
+
+    public static final String MQTT_PORT = "mqttPort";
+
+    public static final String MQTT_DEFAULT_IP = "10.10.197.65";
+
+    public static final String MQTT_DEFAULT_PORT = "1883";
+
+    public static final String TCP = "tcp://";
 }

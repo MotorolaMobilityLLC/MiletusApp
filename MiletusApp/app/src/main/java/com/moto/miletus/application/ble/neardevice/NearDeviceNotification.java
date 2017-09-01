@@ -29,7 +29,6 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
@@ -38,7 +37,6 @@ import com.moto.miletus.application.DeviceListAdapter;
 import com.moto.miletus.application.MainActivity;
 import com.moto.miletus.application.R;
 import com.moto.miletus.ble.commands.SendComponentsGattCommand;
-import com.moto.miletus.gson.info.TinyDevice;
 import com.moto.miletus.application.utils.Strings;
 import com.moto.miletus.wrappers.ComponentWrapper;
 import com.moto.miletus.wrappers.DeviceWrapper;
@@ -81,6 +79,8 @@ public class NearDeviceNotification
      * findDevice
      */
     private void findDevice() {
+        Log.i(TAG, "findDevice");
+
         if (NearDeviceHolder.getNearDevice() == null
                 || DeviceListAdapter.getDataSetOriginal().isEmpty()) {
             notification(null, null, null);
@@ -105,16 +105,10 @@ public class NearDeviceNotification
     private void getLibMiletusBleState(final DeviceWrapper device) {
         Log.i(TAG, "getLibMiletusBleState");
 
-        final SendComponentsGattCommand sendComponentsGattCommand = new SendComponentsGattCommand(context,
+        new SendComponentsGattCommand(context,
                 this,
                 device,
-                new HashSet<ComponentWrapper>());
-        try {
-            sendComponentsGattCommand.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-        } catch (OutOfMemoryError e) {
-            Log.e(TAG, e.toString());
-            sendComponentsGattCommand.execute();
-        }
+                new HashSet<ComponentWrapper>()).execute();
     }
 
     /**
@@ -134,12 +128,12 @@ public class NearDeviceNotification
         } else if (light != null
                 && temp != null) {
             msg = "Welcome to: " + room + Strings.NEW_LINE
-                    + "Light: " + light.getValue() + Strings.lux + Strings.NEW_LINE;
+                    + "Light: " + light.getValue() + Strings.LUX + Strings.NEW_LINE;
 
             try {
                 String tempRound = Precision.round(Float.parseFloat(temp.getValue()), 1) + "";
                 msg = msg
-                        + "Temp: " + tempRound + Strings.celsius + Strings.NEW_LINE;
+                        + "Temp: " + tempRound + Strings.CELSIUS + Strings.NEW_LINE;
             } catch (NumberFormatException ex) {
                 Log.e(TAG, ex.toString());
             }
@@ -176,13 +170,9 @@ public class NearDeviceNotification
                                         final boolean isSuccess) {
         if (!isSuccess) {
             Log.e(TAG, "Failure BLE querying for " + device.getDevice().getName());
-
-            findDevice();
-
-            return;
+        } else {
+            getDeviceStates(device, states);
         }
-
-        getDeviceStates(device, states);
     }
 
     /**
@@ -197,11 +187,11 @@ public class NearDeviceNotification
         ParameterValue temp = null;
 
         for (final StateWrapper state : states) {
-            if (StringUtils.containsIgnoreCase(state.getStateName(), Strings.light)) {
+            if (StringUtils.containsIgnoreCase(state.getStateName(), Strings.LIGHT)) {
                 light = state.getValue();
             }
 
-            if (StringUtils.containsIgnoreCase(state.getStateName(), Strings.temperature)) {
+            if (StringUtils.containsIgnoreCase(state.getStateName(), Strings.TEMPERATURE)) {
                 temp = state.getValue();
             }
         }

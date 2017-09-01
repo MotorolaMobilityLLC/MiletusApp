@@ -24,7 +24,9 @@
 
 package com.moto.miletus.application;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -35,6 +37,7 @@ import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
 import com.moto.miletus.application.ble.neardevice.NearDeviceHolder;
 import com.moto.miletus.application.utils.Strings;
 import com.moto.miletus.wrappers.DeviceWrapper;
@@ -44,7 +47,10 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Adapter for the list of devices. For each {@link DeviceWrapper} added to this
@@ -119,18 +125,12 @@ public class DeviceListAdapter
         if (data.getBleDevice() != null) {
             holder.deviceImage.setImageResource(R.drawable.ic_bluetooth_enabled);
             holder.description.setText(R.string.ble);
-        } else if (data.getDevice().getDiscoveryTransport().isHasCloud()) {
-            holder.deviceImage.setImageResource(R.drawable.ic_wifi_enabled);
+        } else if (data.getMqttInfo() != null) {
+            holder.deviceImage.setImageResource(R.drawable.mqtt);
             holder.description.setText(R.string.cloud);
-        } else if (data.getDevice().getDiscoveryTransport().isHasWifi()) {
+        } else if (data.getNsdServiceInfo() != null) {
             holder.deviceImage.setImageResource(R.drawable.ic_wifi_enabled);
             holder.description.setText(R.string.wifi);
-        } else if (data.getDevice().getDiscoveryTransport().isHasLan()) {
-            holder.deviceImage.setImageResource(R.drawable.ic_wifi_enabled);
-            holder.description.setText(R.string.lan);
-        } else if (data.getDevice().getDiscoveryTransport().isHasBle()) {
-            holder.deviceImage.setImageResource(R.drawable.ic_bluetooth_enabled);
-            holder.description.setText(R.string.ble);
         }
 
         if (compare(data) == 1) {
@@ -176,19 +176,15 @@ public class DeviceListAdapter
     /**
      * compare
      *
-     * @param pair Pair
+     * @param device DeviceWrapper
      * @return int
      */
-    private static int compare(final DeviceWrapper pair) {
+    private static int compare(final DeviceWrapper device) {
         if (NearDeviceHolder.getNearDevice() == null) {
             return 1;
-        } else if (pair.getBleDevice() != null
-                && pair.getBleDevice().getAddress().equalsIgnoreCase(
+        } else if (device.getBleDevice() != null
+                && device.getBleDevice().getAddress().equalsIgnoreCase(
                 NearDeviceHolder.getNearDevice().getAddress())) {
-            return -1;
-        } else if (pair.getDevice().getDiscoveryTransport().isHasBle()
-                && NearDeviceHolder.getNearDevice().getAddress().equalsIgnoreCase(
-                pair.getDevice().getDiscoveryTransport().getBleTransport().getAddress())) {
             return -1;
         } else {
             return 1;
@@ -245,50 +241,69 @@ public class DeviceListAdapter
     }*/
 
     /**
-     * containsId
+     * contains
      *
      * @param device Device
      * @return Device
      */
-    DeviceWrapper containsBle(final DeviceWrapper device) {
-        for (final DeviceWrapper pair : getDataSetFilter()) {
-            if (pair.getBleDevice() != null
-                    && pair.getBleDevice().getAddress().equalsIgnoreCase(device.getBleDevice().getAddress())) {
-                return pair;
+    DeviceWrapper contains(final DeviceWrapper device) {
+        for (final DeviceWrapper deviceWrapper : getDataSetFilter()) {
+            if (device.getMqttInfo() != null
+                    && deviceWrapper.getMqttInfo() != null
+                    && deviceWrapper.getDevice().getName().equalsIgnoreCase(device.getDevice().getName())) {
+                return deviceWrapper;
+            } else if (device.getMqttInfo() == null
+                    && deviceWrapper.getMqttInfo() == null
+                    && deviceWrapper.getBleDevice() != null
+                    && device.getBleDevice() != null
+                    && deviceWrapper.getBleDevice().getAddress().equalsIgnoreCase(device.getBleDevice().getAddress())) {
+                return deviceWrapper;
+            } else if (deviceWrapper.getDevice().getName().equalsIgnoreCase(device.getDevice().getName())
+                    && deviceWrapper.getMqttInfo() == null
+                    && device.getMqttInfo() == null
+                    && deviceWrapper.getBleDevice() == null
+                    && device.getBleDevice() == null) {
+                return deviceWrapper;
             }
         }
         return null;
     }
 
-    /*
-     * containsId
+    /**
+     * getStringSet
      *
-     * @param device Device
-     * @return Device
+     * @return Set<String>
      */
-    /*public DeviceWrapper containsId(final DeviceWrapper device) {
-        for (final DeviceWrapper pair : getDataSetOriginal()) {
-            if (pair.getDevice().getId().equalsIgnoreCase(device.getDevice().getId())) {
-                return pair;
-            }
+    private Set<String> getStringSet() {
+        final Set<String> devices = new HashSet<>();
+        for (final DeviceWrapper device : getDataSetOriginal()) {
+            device.setDate(new Date().getTime());
+            String string = new Gson().toJson(device);
+            devices.add(string);
         }
-        return null;
-    }*/
+        return devices;
+    }
 
     /**
-     * containsName
-     *
-     * @param device Device
-     * @return Device
+     * storeDevices
      */
-    DeviceWrapper containsName(final DeviceWrapper device) {
-        for (final DeviceWrapper pair : getDataSetFilter()) {
-            if (pair.getDevice().getName().equalsIgnoreCase(device.getDevice().getName())
-                    && pair.getBleDevice() == null) {
-                return pair;
-            }
-        }
-        return null;
+    void storeDevices(final Context context) {
+        final SharedPreferences sp = context.getSharedPreferences(Strings.STORED_DEVICES, 0);
+        final SharedPreferences.Editor editor = sp.edit();
+        editor.clear();
+        editor.putStringSet(Strings.STORED_DEVICES, getStringSet());
+        editor.apply();
+    }
+
+    /**
+     * loadDevices
+     *
+     * @param context Context
+     * @return Set<String>
+     */
+    Set<String> loadDevices(final Context context) {
+        final SharedPreferences sp = context.getSharedPreferences(Strings.STORED_DEVICES, 0);
+        return sp.getStringSet(Strings.STORED_DEVICES, new HashSet<String>());
     }
 
     @Override

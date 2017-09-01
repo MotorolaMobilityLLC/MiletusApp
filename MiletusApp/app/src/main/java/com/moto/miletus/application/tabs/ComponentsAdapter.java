@@ -180,12 +180,12 @@ class ComponentsAdapter extends RecyclerView.Adapter<ComponentsAdapter.ViewHolde
             String stateName = stateWrapper.getStateName();
 
             try {
-                if (StringUtils.containsIgnoreCase(stateName, Strings.temperature)) {
+                if (StringUtils.containsIgnoreCase(stateName, Strings.TEMPERATURE)) {
                     stateValue = Precision.round(Float.parseFloat(stateValue), 1) + "";
-                    stateValue = stateValue + Strings.celsius;
-                } else if (StringUtils.containsIgnoreCase(stateName, Strings.light)) {
-                    stateValue = stateValue + Strings.lux;
-                } else if (StringUtils.containsIgnoreCase(stateName, Strings.humidity)) {
+                    stateValue = stateValue + Strings.CELSIUS;
+                } else if (StringUtils.containsIgnoreCase(stateName, Strings.LIGHT)) {
+                    stateValue = stateValue + Strings.LUX;
+                } else if (StringUtils.containsIgnoreCase(stateName, Strings.HUMIDITY)) {
                     stateValue = Math.round(Precision.round(Float.parseFloat(stateValue), 0)) + "";
                     stateValue = stateValue + "%";
                 }
